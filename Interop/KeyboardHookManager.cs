@@ -44,18 +44,26 @@ internal sealed class KeyboardHookManager : IDisposable
     {
         if (nCode >= 0)
         {
-            var hookStruct = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
-            int msg = wParam.ToInt32();
-
-            bool isKeyDown = msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN;
-
-            _modifierTracker.UpdateKeyState(hookStruct.vkCode, isKeyDown);
-
-            if (isKeyDown)
+            try
             {
-                var key = KeyInterop.KeyFromVirtualKey((int)hookStruct.vkCode);
-                var modifiers = _modifierTracker.CurrentModifiers;
-                KeyPressed?.Invoke(new KeyPressedEventArgs(key, (int)hookStruct.vkCode, modifiers));
+                var hookStruct = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
+                int msg = wParam.ToInt32();
+
+                bool isKeyDown = msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN;
+
+                _modifierTracker.UpdateKeyState(hookStruct.vkCode, isKeyDown);
+
+                if (isKeyDown)
+                {
+                    var key = KeyInterop.KeyFromVirtualKey((int)hookStruct.vkCode);
+                    var modifiers = _modifierTracker.CurrentModifiers;
+                    KeyPressed?.Invoke(new KeyPressedEventArgs(key, (int)hookStruct.vkCode, modifiers));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log exception but don't crash - keyboard hook must not throw
+                Debug.WriteLine($"Keyboard hook error: {ex}");
             }
         }
 

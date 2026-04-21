@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
+using System.Windows.Threading;
 using KeyCapture.Interop;
 using KeyCapture.Services;
 using KeyCapture.Views;
@@ -19,6 +21,9 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Setup global exception handlers before anything else
+        SetupExceptionHandlers();
+
         base.OnStartup(e);
 
         // Single-instance guard
@@ -120,5 +125,28 @@ public partial class App : Application
         _trayManager?.Dispose();
         _mutex?.Dispose();
         base.OnExit(e);
+    }
+
+    private void SetupExceptionHandlers()
+    {
+        // Catch exceptions from background threads
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            Debug.WriteLine($"Unhandled AppDomain exception: {e.ExceptionObject}");
+        };
+
+        // Catch exceptions from dispatcher (UI thread)
+        DispatcherUnhandledException += (s, e) =>
+        {
+            Debug.WriteLine($"Unhandled Dispatcher exception: {e.Exception}");
+            e.Handled = true; // Prevent application crash
+        };
+
+        // Catch unobserved task exceptions
+        TaskScheduler.UnobservedTaskException += (s, e) =>
+        {
+            Debug.WriteLine($"Unobserved Task exception: {e.Exception}");
+            e.SetObserved(); // Prevent application crash
+        };
     }
 }

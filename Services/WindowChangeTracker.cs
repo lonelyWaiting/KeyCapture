@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows.Threading;
 using KeyCapture.Interop;
 
@@ -60,18 +61,27 @@ internal sealed class WindowChangeTracker : IDisposable
         if (!_tracking || hwnd == IntPtr.Zero || hwnd == _originalHwnd)
             return;
 
-        // A different window got focus after the key press
-        NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
-        var newAppName = ForegroundWindowService.GetProcessDisplayName(pid);
+        try
+        {
+            // A different window got focus after the key press
+            NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
+            var newAppName = ForegroundWindowService.GetProcessDisplayName(pid);
 
-        // Avoid showing our own overlay or duplicate of the same app
-        if (newAppName == _originalAppName || newAppName == "KeyCapture")
-            return;
+            // Avoid showing our own overlay or duplicate of the same app
+            if (newAppName == _originalAppName || newAppName == "KeyCapture")
+                return;
 
-        StopTracking();
+            StopTracking();
 
-        // Notify: show the chain
-        ForegroundSwitched?.Invoke($"{_keyText} : {_originalAppName} \u2192 {newAppName}");
+            // Notify: show the chain
+            ForegroundSwitched?.Invoke($"{_keyText} : {_originalAppName} \u2192 {newAppName}");
+        }
+        catch (Exception ex)
+        {
+            // Log exception but don't crash - WinEvent hook must not throw
+            Debug.WriteLine($"Window change tracker error: {ex}");
+            StopTracking();
+        }
     }
 
     public void Dispose()

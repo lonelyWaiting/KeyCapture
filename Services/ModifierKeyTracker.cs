@@ -1,3 +1,5 @@
+using KeyCapture.Interop;
+
 namespace KeyCapture.Services;
 
 [Flags]
@@ -30,6 +32,17 @@ internal sealed class ModifierKeyTracker
     {
         get
         {
+            // Synchronize with actual physical key state to recover from missed key-up events
+            // (common for Win-key shortcuts like Win+Tab or Win+L where the hook may lose the release)
+            _lCtrl  = (NativeMethods.GetAsyncKeyState((int)VK_LCONTROL) & 0x8000) != 0;
+            _rCtrl  = (NativeMethods.GetAsyncKeyState((int)VK_RCONTROL) & 0x8000) != 0;
+            _lAlt   = (NativeMethods.GetAsyncKeyState((int)VK_LMENU)    & 0x8000) != 0;
+            _rAlt   = (NativeMethods.GetAsyncKeyState((int)VK_RMENU)    & 0x8000) != 0;
+            _lShift = (NativeMethods.GetAsyncKeyState((int)VK_LSHIFT)   & 0x8000) != 0;
+            _rShift = (NativeMethods.GetAsyncKeyState((int)VK_RSHIFT)   & 0x8000) != 0;
+            _lWin   = (NativeMethods.GetAsyncKeyState((int)VK_LWIN)     & 0x8000) != 0;
+            _rWin   = (NativeMethods.GetAsyncKeyState((int)VK_RWIN)     & 0x8000) != 0;
+
             var m = ActiveModifiers.None;
             if (_lCtrl || _rCtrl) m |= ActiveModifiers.Ctrl;
             if (_lAlt || _rAlt) m |= ActiveModifiers.Alt;
