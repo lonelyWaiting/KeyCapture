@@ -11,6 +11,7 @@ internal sealed class TrayIconManager : IDisposable
 
     public event Action? ExitRequested;
     public event Action? SettingsRequested;
+    public event Action? StatisticsRequested;
 
     public TrayIconManager()
     {
@@ -26,6 +27,9 @@ internal sealed class TrayIconManager : IDisposable
         var settingsItem = new MenuItem { Header = "Settings", Style = menuItemStyle };
         settingsItem.Click += (_, _) => SettingsRequested?.Invoke();
 
+        var statisticsItem = new MenuItem { Header = "Statistics", Style = menuItemStyle };
+        statisticsItem.Click += (_, _) => StatisticsRequested?.Invoke();
+
         var separator = new Separator { Style = separatorStyle };
 
         var exitItem = new MenuItem { Header = "Exit", Style = menuItemStyle };
@@ -34,7 +38,7 @@ internal sealed class TrayIconManager : IDisposable
         _taskbarIcon.ContextMenu = new ContextMenu
         {
             Style = (Style)Application.Current.FindResource("TrayContextMenu"),
-            Items = { settingsItem, separator, exitItem }
+            Items = { settingsItem, statisticsItem, separator, exitItem }
         };
     }
 

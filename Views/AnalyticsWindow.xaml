@@ -1,0 +1,541 @@
+<Window x:Class="KeyCapture.Views.AnalyticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:KeyCapture.Views"
+        Title="KeyCapture — Statistics"
+        Width="750" Height="550"
+        MinWidth="640" MinHeight="420"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True"
+        Icon="/Resources/app.ico"
+        Background="#1E1E2E"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <!-- AlternationIndex is 0-based; add 1 for display -->
+        <local:AlternationRankConverter x:Key="RankConverter"/>
+
+        <!-- Dark card style for suggestion items -->
+        <DataTemplate x:Key="SuggestionCardTemplate">
+            <Border Background="#2A2A3E"
+                    CornerRadius="8"
+                    Padding="16,14"
+                    Margin="0,0,0,10"
+                    BorderBrush="#3A3A52"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Icon}"
+                               FontSize="28"
+                               Margin="0,0,14,0"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="#E0E0F0"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Description}"
+                                   FontSize="12"
+                                   Foreground="#A0A0C0"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Style for DataGrid headers -->
+        <Style x:Key="DarkDataGridColumnHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#2A2A3E"/>
+            <Setter Property="Foreground" Value="#E0E0F0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="BorderBrush" Value="#3A3A52"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+
+        <!-- Style for DataGrid cells -->
+        <Style x:Key="DarkDataGridCell" TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#D0D0E8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style for DataGrid rows -->
+        <Style x:Key="DarkDataGridRow" TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#2A2A3E"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2A2A3E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Style for TabControl -->
+        <Style x:Key="DarkTabControl" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#3A3A52"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <!-- Dark ComboBox style -->
+        <SolidColorBrush x:Key="DarkComboBoxBackground" Color="#2A2A3E"/>
+        <SolidColorBrush x:Key="DarkComboBoxBorder" Color="#3A3A52"/>
+        <SolidColorBrush x:Key="DarkComboBoxForeground" Color="#E0E0F0"/>
+        <SolidColorBrush x:Key="DarkComboBoxHover" Color="#7B8CDE"/>
+        <SolidColorBrush x:Key="DarkComboBoxPopupBg" Color="#2D2D44"/>
+        <SolidColorBrush x:Key="DarkComboBoxItemHover" Color="#3A3A62"/>
+        <SolidColorBrush x:Key="DarkComboBoxArrow" Color="#A0A0C0"/>
+
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="{StaticResource DarkComboBoxBackground}"/>
+            <Setter Property="Foreground" Value="{StaticResource DarkComboBoxForeground}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource DarkComboBoxBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Background="{TemplateBinding Background}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          Padding="{TemplateBinding Padding}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"
+                                          Focusable="False">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="4"
+                                                SnapsToDevicePixels="True">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="24"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter Grid.Column="0"
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="{TemplateBinding Padding}"
+                                                                  Content="{TemplateBinding Content}"
+                                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                  ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                                                  IsHitTestVisible="False"/>
+                                                <Path Grid.Column="1"
+                                                      x:Name="Arrow"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Data="M 0 0 L 4 4 L 8 0 Z"
+                                                      Fill="{StaticResource DarkComboBoxArrow}"
+                                                      Margin="0,2,0,0"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="{StaticResource DarkComboBoxHover}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter Property="BorderBrush" Value="{StaticResource DarkComboBoxHover}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ToggleButton.Content>
+                                    <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"/>
+                                </ToggleButton.Content>
+                            </ToggleButton>
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide"
+                                   StaysOpen="False">
+                                <Border x:Name="DropDownBorder"
+                                        Background="{StaticResource DarkComboBoxPopupBg}"
+                                        BorderBrush="{StaticResource DarkComboBoxBorder}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        SnapsToDevicePixels="True"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer x:Name="DropDownScrollViewer"
+                                                  Margin="4"
+                                                  Focusable="False">
+                                        <ItemsPresenter x:Name="ItemsPresenter"
+                                                        KeyboardNavigation.DirectionalNavigation="Contained"
+                                                        SnapsToDevicePixels="True"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource DarkComboBoxForeground}"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"
+                                              SnapsToDevicePixels="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource DarkComboBoxItemHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource DarkComboBoxItemHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource DarkComboBoxItemHover}"/>
+                                <Setter Property="Foreground" Value="{StaticResource DarkComboBoxForeground}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Dark Button style -->
+        <Style x:Key="DarkButton" TargetType="Button">
+            <Setter Property="Background" Value="#3A3A52"/>
+            <Setter Property="Foreground" Value="#E0E0F0"/>
+            <Setter Property="BorderBrush" Value="#4A4A62"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"
+                                              SnapsToDevicePixels="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#4A4A62"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#7B8CDE"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#2A2A3E"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#7B8CDE"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#7B8CDE"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style for TabItem -->
+        <Style x:Key="DarkTabItem" TargetType="TabItem">
+            <Setter Property="Foreground" Value="#A0A0C0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#7B8CDE"/>
+                                <Setter Property="Foreground" Value="#E0E0F0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#2A2A3E"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title and Top Bar -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="KeyCapture Statistics"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="#E0E0F0"
+                       VerticalAlignment="Center"/>
+
+            <ComboBox x:Name="RangeSelector"
+                      Grid.Column="1"
+                      Width="140"
+                      Height="30"
+                      Margin="0,0,10,0"
+                      Style="{StaticResource DarkComboBox}"
+                      ItemContainerStyle="{StaticResource DarkComboBoxItem}"
+                      SelectionChanged="OnRangeChanged">
+                <ComboBoxItem Content="Today" IsSelected="True"/>
+                <ComboBoxItem Content="Last 7 Days"/>
+                <ComboBoxItem Content="Last 30 Days"/>
+            </ComboBox>
+
+            <Button x:Name="RefreshButton"
+                    Grid.Column="2"
+                    Content="Refresh"
+                    Width="80"
+                    Height="30"
+                    Style="{StaticResource DarkButton}"
+                    Click="OnRefreshClick"/>
+        </Grid>
+
+        <!-- Separator -->
+        <Border Grid.Row="1"
+                Height="1"
+                Background="#3A3A52"
+                Margin="0,0,0,12"/>
+
+        <!-- TabControl -->
+        <TabControl Grid.Row="2"
+                    x:Name="AnalyticsTabs"
+                    Style="{StaticResource DarkTabControl}">
+
+            <!-- Tab 1: Heatmap -->
+            <TabItem Header="Heatmap" Style="{StaticResource DarkTabItem}">
+                <Border Background="#252538"
+                        CornerRadius="8"
+                        Padding="12"
+                        Margin="0,4,0,0"
+                        BorderBrush="#3A3A52"
+                        BorderThickness="1">
+                    <DataGrid x:Name="HeatmapGrid"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              RowBackground="Transparent"
+                              AlternationCount="20"
+                              ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                              CellStyle="{StaticResource DarkDataGridCell}"
+                              RowStyle="{StaticResource DarkDataGridRow}"
+                              LoadingRow="OnHeatmapLoadingRow">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="#" Width="50">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource RankConverter}}"
+                                                   Foreground="#A0A0C0"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Padding="12,6"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Key Combo"
+                                                Binding="{Binding KeyCombo}"
+                                                Width="*"/>
+                            <DataGridTextColumn Header="Count"
+                                                Binding="{Binding Count}"
+                                                Width="90">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="% of Total"
+                                                Binding="{Binding Percentage, StringFormat={}{0:F1}%}"
+                                                Width="100">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+            <!-- Tab 2: App Stats -->
+            <TabItem Header="App Stats" Style="{StaticResource DarkTabItem}">
+                <Border Background="#252538"
+                        CornerRadius="8"
+                        Padding="12"
+                        Margin="0,4,0,0"
+                        BorderBrush="#3A3A52"
+                        BorderThickness="1">
+                    <DataGrid x:Name="AppStatsGrid"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              RowBackground="Transparent"
+                              AlternationCount="10"
+                              ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeader}"
+                              CellStyle="{StaticResource DarkDataGridCell}"
+                              RowStyle="{StaticResource DarkDataGridRow}"
+                              LoadingRow="OnAppStatsLoadingRow">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="#" Width="50">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource RankConverter}}"
+                                                   Foreground="#A0A0C0"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Padding="12,6"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="App Name"
+                                                Binding="{Binding AppName}"
+                                                Width="*"/>
+                            <DataGridTextColumn Header="Key Count"
+                                                Binding="{Binding KeyCount}"
+                                                Width="110">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Active Time (min)"
+                                                Binding="{Binding DurationMinutes, StringFormat={}{0:F1}}"
+                                                Width="140">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+            <!-- Tab 3: Suggestions -->
+            <TabItem Header="Suggestions" Style="{StaticResource DarkTabItem}">
+                <Border Background="#252538"
+                        CornerRadius="8"
+                        Padding="12"
+                        Margin="0,4,0,0"
+                        BorderBrush="#3A3A52"
+                        BorderThickness="1">
+                    <Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="SuggestionsList"
+                                          ItemTemplate="{StaticResource SuggestionCardTemplate}"
+                                          Visibility="Collapsed"/>
+                        </ScrollViewer>
+
+                        <!-- Empty state -->
+                        <StackPanel x:Name="EmptyState"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Visibility="Visible">
+                            <TextBlock Text="No suggestions yet"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="#606080"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="keep typing!"
+                                       FontSize="14"
+                                       Foreground="#505070"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

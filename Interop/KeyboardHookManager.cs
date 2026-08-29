@@ -47,6 +47,12 @@ internal sealed class KeyboardHookManager : IDisposable
             try
             {
                 var hookStruct = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
+
+                // Skip keystrokes this app synthesised itself (e.g. the folder "up" shortcut)
+                // so they are neither shown in the overlay nor recorded as user activity.
+                if (hookStruct.dwExtraInfo == NativeMethods.SyntheticInputSignature)
+                    return NativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
+
                 int msg = wParam.ToInt32();
 
                 bool isKeyDown = msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN;

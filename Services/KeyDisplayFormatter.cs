@@ -1,3 +1,4 @@
+using System.Text;
 using System.Windows.Input;
 using KeyCapture.Interop;
 
@@ -46,25 +47,37 @@ internal sealed class KeyDisplayFormatter
         [Key.Apps] = "Menu",
     };
 
+    // Reused across calls: formatting only ever happens on the hook (UI) thread.
+    private readonly StringBuilder _builder = new(32);
+
     public string Format(KeyPressedEventArgs args)
     {
-        var parts = new List<string>(4);
+        _builder.Clear();
 
-        if (args.Modifiers.HasFlag(ActiveModifiers.Ctrl)) parts.Add("Ctrl");
-        if (args.Modifiers.HasFlag(ActiveModifiers.Alt)) parts.Add("Alt");
-        if (args.Modifiers.HasFlag(ActiveModifiers.Shift)) parts.Add("Shift");
-        if (args.Modifiers.HasFlag(ActiveModifiers.Win)) parts.Add("Win");
+        if ((args.Modifiers & ActiveModifiers.Ctrl) != 0) Append("Ctrl");
+        if ((args.Modifiers & ActiveModifiers.Alt) != 0) Append("Alt");
+        if ((args.Modifiers & ActiveModifiers.Shift) != 0) Append("Shift");
+        if ((args.Modifiers & ActiveModifiers.Win) != 0) Append("Win");
 
         // If it's a modifier-only press, show the modifier name
         if (ModifierKeyTracker.IsModifierKey((uint)args.VirtualKeyCode))
         {
-            if (parts.Count == 0)
-                parts.Add(GetModifierName(args.VirtualKeyCode));
-            return string.Join("+", parts);
+            if (_builder.Length == 0)
+                Append(GetModifierName(args.VirtualKeyCode));
+        }
+        else
+        {
+            Append(GetKeyName(args.Key, args.VirtualKeyCode));
         }
 
-        parts.Add(GetKeyName(args.Key, args.VirtualKeyCode));
-        return string.Join("+", parts);
+        return _builder.ToString();
+    }
+
+    private void Append(string part)
+    {
+        if (_builder.Length > 0)
+            _builder.Append('+');
+        _builder.Append(part);
     }
 
     private static string GetKeyName(Key key, int vkCode)

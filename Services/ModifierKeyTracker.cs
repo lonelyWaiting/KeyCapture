@@ -67,6 +67,25 @@ internal sealed class ModifierKeyTracker
         }
     }
 
+    // Enum.ToString on a [Flags] enum formats through reflection and allocates; the value
+    // range is tiny, so every possible combination is pre-rendered once instead.
+    private static readonly string[] ModifierNames = BuildModifierNames();
+
+    private static string[] BuildModifierNames()
+    {
+        var names = new string[16];
+        for (int value = 0; value < names.Length; value++)
+            names[value] = ((ActiveModifiers)value).ToString();
+        return names;
+    }
+
+    /// <summary>Allocation-free equivalent of <c>modifiers.ToString()</c>.</summary>
+    public static string Describe(ActiveModifiers modifiers)
+    {
+        int value = (int)modifiers;
+        return (uint)value < ModifierNames.Length ? ModifierNames[value] : modifiers.ToString();
+    }
+
     public static bool IsModifierKey(uint vkCode) => vkCode switch
     {
         VK_LCONTROL or VK_RCONTROL or VK_LMENU or VK_RMENU
